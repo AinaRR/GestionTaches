@@ -12,7 +12,7 @@ function onOpen() {
   formaterColonneHeure();
   ajouterIndentation();
 
-  // ✅ Appliquer les alignements au démarrage
+  // Appliquer les alignements au démarrage
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const src = ss.getSheetByName("Tâches sample");
   if (src) alignerDonneesSansEntete(src);
@@ -167,7 +167,7 @@ function syncEtRappels() {
       let rappel = '~';
       let tempsDepasse = false;
 
-      // 🔄 Calcul de l’heure finale (heure actuelle + durée)
+      // Calcul de l’heure finale (heure actuelle + durée)
       let heureFinale = '';
       if (tempsEcheance instanceof Date) {
         const maintenant = new Date();
