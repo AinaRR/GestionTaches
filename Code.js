@@ -207,7 +207,8 @@ function creationEntetesTachesSample() {
     .setFontFamily("Georgia")
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle")
-    .setFontWeight("bold");  // bonus : mettre en gras les en-têtes
+    .setFontWeight("bold")
+    .setBackground("#d6eaf8");;  
 
 }
 
@@ -248,6 +249,7 @@ function creationEntetesTachesEnregistres() {
     .setFontFamily("Georgia")
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle")
-    .setFontWeight("bold");  // bonus : mettre en gras les en-têtes
+    .setFontWeight("bold")
+    .setBackground("#f0b27a");  
 
 }
