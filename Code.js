@@ -9,8 +9,8 @@ function onOpen() {
     .addItem("🧹 Réinitialiser les tâches", "resetTaches")
     .addToUi();
 
-  creationentetes(); // Création des entêtes 
-  creationEntetesTachesEnregistres();
+  creationEntetesTachesSample(); // Création des entêtes dans Tâches sample
+  creationEntetesTachesEnregistres(); // Création des entête dans Tâches enregistrés
   installerTrigger(); // Déclenche automatiquement l'installation du trigger
 }
 
@@ -204,6 +204,7 @@ function creationEntetesTachesSample() {
   feuille.getRange(1, 1, totalRows, headers.length).setWrap(true);
 
   feuille.getRange(1, 1, 1, headers.length)
+    .setFontFamily("Georgia")
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle")
     .setFontWeight("bold");  // bonus : mettre en gras les en-têtes
@@ -244,6 +245,7 @@ function creationEntetesTachesEnregistres() {
 
   // Centrer horizontalement et verticalement la ligne d'en-tête (ligne 1)
   feuille.getRange(1, 1, 1, headers.length)
+    .setFontFamily("Georgia")
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle")
     .setFontWeight("bold");  // bonus : mettre en gras les en-têtes
