@@ -9,7 +9,9 @@ function onOpen() {
     .addItem("🧹 Réinitialiser les tâches", "resetTaches")
     .addToUi();
 
-  installerTrigger(); // déclenche automatiquement l'installation du trigger
+  creationentetes(); // Création des entêtes 
+  creationEntetesTachesEnregistres();
+  installerTrigger(); // Déclenche automatiquement l'installation du trigger
 }
 
 
@@ -168,7 +170,82 @@ function logErreur(msg, e) {
 
 function supprimerValidationsEtInfobulles() {
   const feuille = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const plage = feuille.getDataRange();
+  const plage = feuille.getRange(1, 1, feuille.getMaxRows(), feuille.getMaxColumns());
+  plage.clearDataValidations();
+}
 
-  plage.clearDataValidations(); // Supprime les validations (et donc les infobulles associées)
+function creationEntetesTachesSample() {
+  const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tâches sample');
+  if (!feuille) {
+    SpreadsheetApp.getUi().alert("Feuille 'Tâches sample' introuvable.");
+    return;
+  }
+
+  const headers = [
+    "Projet", 
+    "Assigné à", 
+    "Email", 
+    "Date d’échéance (Projet)", 
+    "Statut", 
+    "Tâche", 
+    "Temps d’échéance (Tâche)"
+  ];
+
+  // Insérer les en-têtes
+  feuille.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  // Définir des largeurs de colonnes spécifiques
+  const largeurs = [200, 100, 170, 170, 60, 200, 170];
+  for (let i = 0; i < largeurs.length; i++) {
+    feuille.setColumnWidth(i + 1, largeurs[i]); // i + 1 car les colonnes sont 1-based
+  }
+
+  const totalRows = feuille.getMaxRows();
+  feuille.getRange(1, 1, totalRows, headers.length).setWrap(true);
+
+  feuille.getRange(1, 1, 1, headers.length)
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setFontWeight("bold");  // bonus : mettre en gras les en-têtes
+
+}
+
+function creationEntetesTachesEnregistres() {
+  const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tâches enregistrées');
+  if (!feuille) {
+    SpreadsheetApp.getUi().alert("Feuille 'Tâches enregistrées' introuvable.");
+    return;
+  }
+
+  const headers = [
+    "Projet", 
+    "Assigné à", 
+    "Email", 
+    "Date d’échéance (Projet)", 
+    "Statut", 
+    "Ligne", 
+    "Rappel", 
+    "Tâche", 
+    "Temps d’échéance (Tâche)"
+  ];
+
+  // Insérer les en-têtes
+  feuille.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  // Définir les largeurs personnalisées
+  const largeurs = [200, 100, 170, 170, 60, 60, 60, 200, 170];
+  for (let i = 0; i < largeurs.length; i++) {
+    feuille.setColumnWidth(i + 1, largeurs[i]);
+  }
+
+  // Appliquer le retour à la ligne automatique sur toute la feuille (colonnes A à I)
+  const totalRows = feuille.getMaxRows();
+  feuille.getRange(1, 1, totalRows, headers.length).setWrap(true);
+
+  // Centrer horizontalement et verticalement la ligne d'en-tête (ligne 1)
+  feuille.getRange(1, 1, 1, headers.length)
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setFontWeight("bold");  // bonus : mettre en gras les en-têtes
+
 }
