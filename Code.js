@@ -15,7 +15,6 @@ function onOpen() {
   syncEtRappels(); 
 }
 
-
 function alignerColonnesADroiteParFeuille(nomFeuille, colonnes) {
   const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomFeuille);
   if (!feuille) return;
@@ -71,7 +70,7 @@ function mettreAJourStatut(nouveauStatut) {
 /*************** SYNCHRONISATION + RAPPELS ***************/
 function syncEtRappels() {
   try {
-    alignerColonnesADroiteParFeuille("Tâches sample", [1, 2, 3, 5, 6]);
+    alignerColonnesADroiteParFeuille("Tâches sample", [1, 2, 3, 4, 5, 6]);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const src = ss.getSheetByName('Tâches sample');
     const today = new Date(); 
@@ -79,7 +78,7 @@ function syncEtRappels() {
 
     const srcData = src.getDataRange().getValues();
     const headers = [
-      "Projet", "Assigné à", "Email", "Date d’échéance (Projet)", 
+      "Projet ID", "Projet", "Assigné à", "Email", "Date d’échéance (Projet)", 
       "Statut", "Ligne", "Rappel", "Tâche", "Temps d’échéance (Tâche)"
     ];
     const emails = [];
@@ -87,7 +86,9 @@ function syncEtRappels() {
 
     for (let i = 1; i < srcData.length; i++) {
       const row = srcData[i];
-      const [projet, assigne, email, dateProjet, statut, tache, tempsEcheance] = row;
+      const [projetIDCell, projet, assigne, email, dateProjet, statut, tache, tempsEcheance] = row;
+
+      const projetID = projetIDCell || "P-" + i.toString().padStart(4, "0"); // <-- ICI
 
       if (!projet || !assigne || !email || !dateProjet || !statut) continue;
       if (!/@/.test(email.trim())) continue;
@@ -134,7 +135,7 @@ function syncEtRappels() {
         }
       }
 
-      rows.push([projet, assigne, email, dateProjet, statut, i + 2, rappel, tache, heureFinale]);
+      rows.push([projetID, projet, assigne, email, dateProjet, statut, i + 2, rappel, tache, heureFinale]);
     }
 
     // Envoi des emails
@@ -195,6 +196,7 @@ function creationEntetesTachesSample() {
   }
 
   const headers = [
+    "ProjetID", // Nouvelle colonne
     "Projet", 
     "Assigné à", 
     "Email", 
@@ -204,13 +206,11 @@ function creationEntetesTachesSample() {
     "Temps d’échéance (Tâche)"
   ];
 
-  // Insérer les en-têtes
   feuille.getRange(1, 1, 1, headers.length).setValues([headers]);
 
-  // Définir des largeurs de colonnes spécifiques
-  const largeurs = [200, 100, 170, 170, 60, 200, 170];
+  const largeurs = [90, 200, 100, 170, 170, 60, 200, 170];
   for (let i = 0; i < largeurs.length; i++) {
-    feuille.setColumnWidth(i + 1, largeurs[i]); // i + 1 car les colonnes sont 1-based
+    feuille.setColumnWidth(i + 1, largeurs[i]);
   }
 
   const totalRows = feuille.getMaxRows();
@@ -221,8 +221,7 @@ function creationEntetesTachesSample() {
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle")
     .setFontWeight("bold")
-    .setBackground("#d6eaf8");  
-
+    .setBackground("#d6eaf8");
 }
 
 function afficherTableauHTML(headers, rows) {
@@ -235,16 +234,15 @@ function afficherTableauHTML(headers, rows) {
     return;
   }
 
-  // ✅ Formater la colonne date (colonne 4 = index 3)
+    // ✅ Formater la colonne date (index 4 car Projet ID est en index 0)
   const timeZone = Session.getScriptTimeZone();
   rows = rows.map(row => {
     const newRow = [...row];
-    const dateProjet = row[3];
-    if (dateProjet instanceof Date) {
-      newRow[3] = Utilities.formatDate(dateProjet, timeZone, "dd/MM/yyyy");
+    const dateProjet = row[4];
+    if (dateProjet instanceof Date) {        newRow[4] = Utilities.formatDate(dateProjet, timeZone, "dd/MM/yyyy");
     }
-    return newRow;
-  });
+      return newRow;
+    });
 
   let html = `
     <html>
@@ -329,6 +327,7 @@ function verifierOuCreerFeuilleHistorique() {
   }
 
   const headers = [
+  "ProjetId",
   "Projet", 
   "Tâche", 
   "Assigné à", 
@@ -341,7 +340,7 @@ function verifierOuCreerFeuilleHistorique() {
   feuille.getRange(1, 1, 1, headers.length).setValues([headers]);
 
   // Définir des largeurs personnalisées pour les colonnes
-  const largeurs = [200, 200, 100, 170, 170, 200];
+  const largeurs = [90, 200, 200, 100, 170, 170, 200];
   for (let i = 0; i < largeurs.length; i++) {
     feuille.setColumnWidth(i + 1, largeurs[i]);
   }
@@ -349,6 +348,7 @@ function verifierOuCreerFeuilleHistorique() {
   // Appliquer le retour à la ligne automatique sur toute la feuille
   const totalRows = feuille.getMaxRows();
   feuille.getRange(1, 1, totalRows, headers.length).setWrap(true);
+
 
   // Centrer horizontalement et verticalement la ligne d'en-tête (ligne 1)
   feuille.getRange(1, 1, 1, headers.length)
@@ -373,32 +373,33 @@ function enregistrerProjetsEtTaches() {
   const historiqueData = feuilleHistorique.getDataRange().getValues();
 
   const timeZone = Session.getScriptTimeZone();
-  const horodatageNouveau = Utilities.formatDate(new Date(), timeZone, "yyyy-MM-dd HH:mm:ss");
+  const horodatageNouveau = Utilities.formatDate(new Date(), timeZone, "dd-MM-yyyy HH:mm");
 
-  // Créer une map : clé unique → numéro de ligne
+  // Créer une map : ProjetID → numéro de ligne dans historique
   const indexCleHistorique = {};
   for (let i = 1; i < historiqueData.length; i++) {
     const ligne = historiqueData[i];
-    const cle = `${ligne[0]}__${ligne[1]}__${ligne[3]}`; // Projet__Tâche__Email
-    indexCleHistorique[cle] = i + 1; // ligne réelle (1-based)
+    const projetID = ligne[0];
+    if (projetID) {
+      indexCleHistorique[projetID] = i + 1; // ligne réelle (1-based)
+    }
   }
 
   for (let i = 1; i < donnees.length; i++) {
     const ligne = donnees[i];
-    const [projet, assigneA, email, dateProjet, , tache] = ligne;
-    if (!projet || !tache || !email || !dateProjet) continue;
+    const [projetID, projet, assigneA, email, dateProjet, , tache] = ligne;
+    if (!projetID || !projet || !tache || !email || !dateProjet) continue;
 
     const dateProjetFormatee = dateProjet instanceof Date
       ? Utilities.formatDate(dateProjet, timeZone, "yyyy-MM-dd")
       : dateProjet;
 
-    const cle = `${projet}__${tache}__${email}`;
-
-    if (indexCleHistorique[cle]) {
+    if (indexCleHistorique[projetID]) {
       // Ligne existante → conserver la date d'origine
-      const ligneIndex = indexCleHistorique[cle];
-      const ancienneDate = feuilleHistorique.getRange(ligneIndex, 6).getValue(); // 6 = "Date et Heure de Création"
+      const ligneIndex = indexCleHistorique[projetID];
+      const ancienneDate = feuilleHistorique.getRange(ligneIndex, 7).getValue(); // 7 = "Date et Heure de Création"
       const valeurs = [
+        projetID,
         projet,
         tache,
         assigneA,
@@ -409,8 +410,9 @@ function enregistrerProjetsEtTaches() {
       feuilleHistorique.getRange(ligneIndex, 1, 1, valeurs.length).setValues([valeurs]);
 
     } else {
-      // Nouvelle ligne → ajouter avec la date courante
+      // Nouvelle entrée → ajouter une ligne avec la date courante
       const valeurs = [
+        projetID,
         projet,
         tache,
         assigneA,
