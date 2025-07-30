@@ -121,7 +121,6 @@ function syncEtRappels() {
           rappel = '☑️ à rappeler';
           emails.push({ email: email.trim(), assigne, tache: projet, date: dateProjet, tempsDepasse: false });
         }
-
         if (tempsEcheance instanceof Date && diff === 0) {
           const maintenant = new Date();
           const heureTache = new Date();
@@ -221,6 +220,7 @@ function creationEntetesTachesSample() {
     .setVerticalAlignment("middle")
     .setFontWeight("bold")
     .setBackground("#d6eaf8");
+
 }
 
 function afficherTableauHTML(headers, rows) {
@@ -357,7 +357,7 @@ function verifierOuCreerFeuilleHistorique() {
     .setFontWeight("bold")
     .setBackground("#F76363");
   
-  alignerColonnesADroiteParFeuille("Historique", [1, 2, 3, 4, 5, 6]);
+  alignerColonnesADroiteParFeuille("Historique", [1, 2, 3, 4, 5]);
   
   return feuille;
   
@@ -375,7 +375,7 @@ function enregistrerProjetsEtTaches() {
   const timeZone = Session.getScriptTimeZone();
   const horodatageActuel = Utilities.formatDate(new Date(), timeZone, "dd-MM-yyyy HH:mm");
 
-  // Construction des index pour comparaison
+  // Construction des index pour comparaison avec une clé composite
   const projetsSource = {};
   for (let i = 1; i < donneesSource.length; i++) {
     const ligne = donneesSource[i];
@@ -387,7 +387,9 @@ function enregistrerProjetsEtTaches() {
       ? Utilities.formatDate(dateProjet, timeZone, "yyyy-MM-dd")
       : dateProjet;
 
-    projetsSource[projetID] = [
+    const cleComposite = `${projetID}||${projet}||${tache}`;
+
+    projetsSource[cleComposite] = [
       projetID,
       projet,
       tache,
@@ -401,33 +403,35 @@ function enregistrerProjetsEtTaches() {
   const projetsHistorique = {};
   for (let i = 1; i < donneesHistorique.length; i++) {
     const ligne = donneesHistorique[i];
-    const projetID = ligne[0];
-    if (projetID) projetsHistorique[projetID] = i + 1; // ligne réelle
+    const [projetID, projet, tache] = ligne;
+    if (!projetID || !projet || !tache) continue;
+
+    const cleComposite = `${projetID}||${projet}||${tache}`;
+    projetsHistorique[cleComposite] = i + 1; // ligne réelle (1-based)
   }
 
   const lignesASupprimer = [];
-  const misesAJour = [];
 
   // Détecter lignes à supprimer (présentes dans historique mais absentes dans source)
-  Object.keys(projetsHistorique).forEach(pid => {
-    if (!projetsSource[pid]) {
-      lignesASupprimer.push(projetsHistorique[pid]);
+  Object.keys(projetsHistorique).forEach(cle => {
+    if (!projetsSource[cle]) {
+      lignesASupprimer.push(projetsHistorique[cle]);
     }
   });
 
   // Appliquer les mises à jour ou ajouts
-  Object.entries(projetsSource).forEach(([pid, valeurs]) => {
-    if (projetsHistorique[pid]) {
-      const ligneIndex = projetsHistorique[pid];
+  Object.entries(projetsSource).forEach(([cle, valeurs]) => {
+    if (projetsHistorique[cle]) {
+      const ligneIndex = projetsHistorique[cle];
       const ancienneDate = feuilleHistorique.getRange(ligneIndex, 7).getValue();
-      valeurs[6] = ancienneDate; // Conserver date de création
+      valeurs[6] = ancienneDate; // Conserver la date de création
       feuilleHistorique.getRange(ligneIndex, 1, 1, valeurs.length).setValues([valeurs]);
     } else {
       feuilleHistorique.appendRow(valeurs);
     }
   });
 
-  // Supprimer les lignes obsolètes (en partant de la fin pour éviter les décalages)
+  // Supprimer les lignes obsolètes (de bas en haut pour éviter les décalages)
   lignesASupprimer.sort((a, b) => b - a).forEach(index => {
     feuilleHistorique.deleteRow(index);
   });
