@@ -70,7 +70,7 @@ function mettreAJourStatut(nouveauStatut) {
 /*************** SYNCHRONISATION + RAPPELS ***************/
 function syncEtRappels() {
   try {
-    alignerColonnesADroiteParFeuille("Tâches sample", [1, 2, 3, 4, 5, 6]);
+    alignerColonnesADroiteParFeuille("Tâches sample", [1, 2, 3, 4, 5, 6, 7]);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const src = ss.getSheetByName('Tâches sample');
     const today = new Date(); 
@@ -88,7 +88,7 @@ function syncEtRappels() {
       const row = srcData[i];
       const [projetIDCell, projet, assigne, email, dateProjet, statut, tache, tempsEcheance] = row;
 
-      const projetID = projetIDCell || "P-" + i.toString().padStart(4, "0"); // <-- ICI
+      const projetID = projetIDCell || "P-" + i.toString().padStart(4, "0"); // 
 
       if (!projet || !assigne || !email || !dateProjet || !statut) continue;
       if (!/@/.test(email.trim())) continue;
@@ -173,7 +173,6 @@ function installerTrigger() {
     .everyDays(1)
     .atHour(9)
     .create();
-
 }
 
 /*************** RÉINITIALISATION TÂCHES ***************/
@@ -239,7 +238,7 @@ function afficherTableauHTML(headers, rows) {
   rows = rows.map(row => {
     const newRow = [...row];
     const dateProjet = row[4];
-    if (dateProjet instanceof Date) {        newRow[4] = Utilities.formatDate(dateProjet, timeZone, "dd/MM/yyyy");
+    if (dateProjet instanceof Date) { newRow[4] = Utilities.formatDate(dateProjet, timeZone, "dd/MM/yyyy");
     }
       return newRow;
     });
@@ -327,7 +326,7 @@ function verifierOuCreerFeuilleHistorique() {
   }
 
   const headers = [
-  "ProjetId",
+  "Projet ID",
   "Projet", 
   "Tâche", 
   "Assigné à", 
@@ -357,70 +356,79 @@ function verifierOuCreerFeuilleHistorique() {
     .setVerticalAlignment("middle")
     .setFontWeight("bold")
     .setBackground("#F76363");
-
+  
+  alignerColonnesADroiteParFeuille("Historique", [1, 2, 3, 4, 5, 6]);
+  
   return feuille;
-  //alignerColonnesADroiteParFeuille("Historique", [1, 2, 3, 4, 6]);
+  
 }
 
 function enregistrerProjetsEtTaches() {
   const feuilleSource = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tâches sample');
   if (!feuilleSource) return;
 
-  const donnees = feuilleSource.getDataRange().getValues();
-  if (donnees.length < 2) return;
+  const donneesSource = feuilleSource.getDataRange().getValues();
+  if (donneesSource.length < 2) return;
 
   const feuilleHistorique = verifierOuCreerFeuilleHistorique();
-  const historiqueData = feuilleHistorique.getDataRange().getValues();
-
+  const donneesHistorique = feuilleHistorique.getDataRange().getValues();
   const timeZone = Session.getScriptTimeZone();
-  const horodatageNouveau = Utilities.formatDate(new Date(), timeZone, "dd-MM-yyyy HH:mm");
+  const horodatageActuel = Utilities.formatDate(new Date(), timeZone, "dd-MM-yyyy HH:mm");
 
-  // Créer une map : ProjetID → numéro de ligne dans historique
-  const indexCleHistorique = {};
-  for (let i = 1; i < historiqueData.length; i++) {
-    const ligne = historiqueData[i];
-    const projetID = ligne[0];
-    if (projetID) {
-      indexCleHistorique[projetID] = i + 1; // ligne réelle (1-based)
-    }
-  }
-
-  for (let i = 1; i < donnees.length; i++) {
-    const ligne = donnees[i];
+  // Construction des index pour comparaison
+  const projetsSource = {};
+  for (let i = 1; i < donneesSource.length; i++) {
+    const ligne = donneesSource[i];
     const [projetID, projet, assigneA, email, dateProjet, , tache] = ligne;
+
     if (!projetID || !projet || !tache || !email || !dateProjet) continue;
 
     const dateProjetFormatee = dateProjet instanceof Date
       ? Utilities.formatDate(dateProjet, timeZone, "yyyy-MM-dd")
       : dateProjet;
 
-    if (indexCleHistorique[projetID]) {
-      // Ligne existante → conserver la date d'origine
-      const ligneIndex = indexCleHistorique[projetID];
-      const ancienneDate = feuilleHistorique.getRange(ligneIndex, 7).getValue(); // 7 = "Date et Heure de Création"
-      const valeurs = [
-        projetID,
-        projet,
-        tache,
-        assigneA,
-        email,
-        dateProjetFormatee,
-        ancienneDate
-      ];
-      feuilleHistorique.getRange(ligneIndex, 1, 1, valeurs.length).setValues([valeurs]);
+    projetsSource[projetID] = [
+      projetID,
+      projet,
+      tache,
+      assigneA,
+      email,
+      dateProjetFormatee,
+      horodatageActuel
+    ];
+  }
 
+  const projetsHistorique = {};
+  for (let i = 1; i < donneesHistorique.length; i++) {
+    const ligne = donneesHistorique[i];
+    const projetID = ligne[0];
+    if (projetID) projetsHistorique[projetID] = i + 1; // ligne réelle
+  }
+
+  const lignesASupprimer = [];
+  const misesAJour = [];
+
+  // Détecter lignes à supprimer (présentes dans historique mais absentes dans source)
+  Object.keys(projetsHistorique).forEach(pid => {
+    if (!projetsSource[pid]) {
+      lignesASupprimer.push(projetsHistorique[pid]);
+    }
+  });
+
+  // Appliquer les mises à jour ou ajouts
+  Object.entries(projetsSource).forEach(([pid, valeurs]) => {
+    if (projetsHistorique[pid]) {
+      const ligneIndex = projetsHistorique[pid];
+      const ancienneDate = feuilleHistorique.getRange(ligneIndex, 7).getValue();
+      valeurs[6] = ancienneDate; // Conserver date de création
+      feuilleHistorique.getRange(ligneIndex, 1, 1, valeurs.length).setValues([valeurs]);
     } else {
-      // Nouvelle entrée → ajouter une ligne avec la date courante
-      const valeurs = [
-        projetID,
-        projet,
-        tache,
-        assigneA,
-        email,
-        dateProjetFormatee,
-        horodatageNouveau
-      ];
       feuilleHistorique.appendRow(valeurs);
     }
-  }
+  });
+
+  // Supprimer les lignes obsolètes (en partant de la fin pour éviter les décalages)
+  lignesASupprimer.sort((a, b) => b - a).forEach(index => {
+    feuilleHistorique.deleteRow(index);
+  });
 }
